@@ -377,12 +377,17 @@ def play_video(video_path, fps=24, use_color=True, use_blocks=True,srt_path=None
                 sys.stdout.write("\033["+str(height)+";0H\033[1;30mstats:" + frame_cstatus + str(frame_count)  +"\033[1;30m"+"/" + str(total_frames)+"|drops:"+str(frame_drops) + "|fps tgt/cur: " + str(round(frame_rate,2)) +"/"+fpsstr+ "|"+etimestr+"|wxh:"+str(width)+"x"+str(height)+"\033[0m")
                 sys.stdout.write("\033["+str(height-1)+";0H"+(" "*width))
                 sys.stdout.write(midline+subout)
-                if elapsed_time - elapsed_playtime > ((1/frame_rate)*.98):
+                if elapsed_time - elapsed_playtime > ((1/frame_rate)*.98)*10:
                     #drop next frame -- this method might be causing some slowdown,
                     # reconsider cap.read() and throwing away the frames
                     frame_drops+=targetframe - frame_count
                     cap.set(cv2.CAP_PROP_POS_FRAMES, targetframe)
                     frame_count = targetframe
+                elif elapsed_time - elapsed_playtime > ((1/frame_rate)*.98):
+                    for i in range(targetframe - frame_count):
+                        cap.read()
+                        frame_count+=1
+                        frame_drops+=1
             
         cap.release()
         print("\nVideo playback completed!")
@@ -480,6 +485,8 @@ def main():
         subproc=subprocess.Popen([vlc, video_path,"--no-video","--play-and-exit","-I dummy",])
     # Play the video
     with keep.presenting():
+        # shit starts too quick, TODO: take as arg 
+        time.sleep(0.24)
         play_video(video_path, fps=fps, use_color=use_color, use_blocks=use_blocks,srt_path=srt_path,subproc=subproc)
     #processmp.join()
 
