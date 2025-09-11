@@ -7,3 +7,6 @@ Download the dependencies:
 Invoke the shell:
 * Play in color with audio (from VLC): ```python aplay.py video.mp4 --color --audio```
 * Play in B/W with subtitles: ```python aplay video.mp4 --srt```
+
+Example running in vscode terminal:
+![image](https://github.com/xmycroftx/aplay/blob/main/screeny.png?raw=true)
