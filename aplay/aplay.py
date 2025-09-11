@@ -129,8 +129,7 @@ def rgb_to_ansi(r, g, b):
 def image_to_ascii(image, use_color=False):
     """Convert PIL image to ASCII art with optional color support"""
     # Define ASCII characters from dark to light
-    ascii_chars = "·¬°«+±¢®*º¤æ©¾%§&¶@"
-
+    ascii_chars = "·¬°«+±¢®*º¤æ¾%§&¶@"
     if use_color:
         # Keep original image for color data
         color_image = image
@@ -269,7 +268,7 @@ def format_subtitle_text(subtitle_text, width, max_lines=3):
     # Limit to max_lines
     return formatted_lines[:max_lines]
 
-def play_video(video_path, fps=24, use_color=True, use_blocks=True,srt_path=None,subproc=None):
+def play_video(video_path, fps=None, use_color=True, use_blocks=True,srt_path=None,subproc=None):
     """Play video as ASCII art with optional color support"""
     try:
         subtitle_parser = None
@@ -287,7 +286,13 @@ def play_video(video_path, fps=24, use_color=True, use_blocks=True,srt_path=None
 
         # Get video properties
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-        frame_rate = cap.get(cv2.CAP_PROP_FPS)
+        source_fps = cap.get(cv2.CAP_PROP_FPS)
+        if fps != None:
+            frame_rate = fps
+        else:
+            frame_rate = cap.get(cv2.CAP_PROP_FPS)
+
+
 
         print(f"Playing video: {os.path.basename(video_path)}")
         print(f"Total frames: {total_frames}")
@@ -314,7 +319,8 @@ def play_video(video_path, fps=24, use_color=True, use_blocks=True,srt_path=None
 
             if not ret:
                 break
-            elapsed_playtime = frame_count / frame_rate
+            elapsed_playtime = frame_count / source_fps
+            
             # Get current subtitle
             current_subtitle = None
             if subtitle_parser:
@@ -367,14 +373,17 @@ def play_video(video_path, fps=24, use_color=True, use_blocks=True,srt_path=None
                     frametracker = []
                 # buffer here and then maybe wait
                 etimestr=str(gettimer(elapsed_playtime))
+                
+                #sleep_time = max(0, elapsed_time - (elapsed_playtime + (1/frame_rate)))
                 sleep_time = max (0, (elapsed_playtime - (elapsed_time + (1/frame_rate))))
                 time.sleep(sleep_time)
-                targetframe = int(elapsed_time/(1/frame_rate))
+
+                targetframe = int(elapsed_time/(1/source_fps))
                 if targetframe > frame_count:
                     frame_cstatus = "\033[31m"
                 else:
                     frame_cstatus = "\033[32m"
-                sys.stdout.write("\033["+str(height)+";0H\033[1;30mstats:" + frame_cstatus + str(frame_count)  +"\033[1;30m"+"/" + str(total_frames)+"|drops:"+str(frame_drops) + "|fps tgt/cur: " + str(round(frame_rate,2)) +"/"+fpsstr+ "|"+etimestr+"|wxh:"+str(width)+"x"+str(height)+"\033[0m")
+                sys.stdout.write("\033["+str(height)+";0H\033[1;30mstats:" + frame_cstatus + str(frame_count)  +"\033[1;30m"+"/" + str(total_frames)+"|drops:"+str(frame_drops) + "|fps tgt/cur: " + str(round(frame_rate,2)) +"/"+fpsstr+ "|"+etimestr+"|wxh:"+str(width)+"x"+str(height)+"|sl:"+str(sleep_time)+"\033[0m")
                 sys.stdout.write("\033["+str(height-1)+";0H"+(" "*width))
                 sys.stdout.write(midline+subout)
                 if elapsed_time - elapsed_playtime > ((1/frame_rate)*.98)*10:
@@ -411,7 +420,7 @@ def main():
         print("  --color     Enable color ASCII output")
         #deprecated TODO: remove
         #print("  --blocks    Use block characters (works best with --color)")
-        print("  --fps N     Set playback FPS (default: 15)")
+        print("  --fps N     Set playback FPS (default: source)")
         print("  --srt (F)   Subtitle support (filename optional)")
         print("  --audio     enable VLC audio playback support")
         print("\nExamples:")
@@ -444,7 +453,7 @@ def main():
             return
 
     # Parse FPS argument
-    fps = 15
+    fps = None
     if "--fps" in sys.argv:
         try:
             fps_idx = sys.argv.index("--fps")
@@ -482,7 +491,7 @@ def main():
     #prep audio.
     subproc=None
     if vlc_audio:
-        subproc=subprocess.Popen([vlc, video_path,"--no-video","--play-and-exit","-I dummy",])
+        subproc=subprocess.Popen([vlc_path, video_path,"--no-video","--play-and-exit","-I dummy",])
     # Play the video
     with keep.presenting():
         # shit starts too quick, TODO: take as arg 
